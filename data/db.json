@@ -1,0 +1,256 @@
+{
+  "users": [
+    {
+      "id": "admin-user",
+      "email": "austinolayinka667@gmail.com",
+      "name": "Admin Austin",
+      "passwordHash": "$2b$10$O0N6qf7.pCgO6FwWv5gL/.bCg9O.3B9g3qZ2Fp8.t1Q9h8Z2vC3vO",
+      "role": "admin",
+      "isPremium": true
+    },
+    {
+      "id": "test-student",
+      "email": "student@cbtprep.com",
+      "name": "Test Student",
+      "passwordHash": "$2b$10$K7Z2vC3vO0N6qf7.pCgO6FwWv5gL/.bCg9O.3B9g3qZ2Fp8.t1Q9h8",
+      "role": "user",
+      "isPremium": false
+    }
+  ],
+  "sessions": {},
+  "courses": [
+    {
+      "id": "course-gst-100",
+      "title": "GST 100-Level Compulsory Courses",
+      "description": "Foundational general studies program covering academic communication, philosophy, logic, library usage, and Nigerian cultural heritage.",
+      "category": "100 LEVEL"
+    },
+    {
+      "id": "course-gst-200",
+      "title": "GST 200-Level Compulsory Courses",
+      "description": "Advanced general studies courses focusing on scientific evolution, peace, security, conflict management, and national cohesion.",
+      "category": "200 LEVEL"
+    }
+  ],
+  "subjects": [
+    {
+      "id": "subj-gst111",
+      "courseId": "course-gst-100",
+      "title": "GST 111: Communication in English",
+      "description": "Focuses on active study skills, paragraphs, listening comprehension, note-taking, spelling, vocabulary, and phonetic transcriptions."
+    },
+    {
+      "id": "subj-gst112",
+      "courseId": "course-gst-100",
+      "title": "GST 112: Philosophy, Human Existence & Logic",
+      "description": "An introduction to logic, formal and informal fallacies, philosophical inquiry, scientific methods, and theories of existence."
+    },
+    {
+      "id": "subj-gst113",
+      "courseId": "course-gst-100",
+      "title": "GST 113: Nigerian Peoples and Culture",
+      "description": "Examines pre-colonial political administrations, cultural zones, traditional family structures, and socio-economic integration in Nigeria."
+    },
+    {
+      "id": "subj-gst121",
+      "courseId": "course-gst-100",
+      "title": "GST 121: Use of Library & ICT",
+      "description": "Study of library catalogs, classifications (Library of Congress, DDC), search strategies, bibliographical citations, and digital literacy."
+    },
+    {
+      "id": "subj-gst211",
+      "courseId": "course-gst-200",
+      "title": "GST 211: History and Philosophy of Science",
+      "description": "Examines the evolution of science, major scientific revolutions, theories of development, and the impact of technology on society."
+    },
+    {
+      "id": "subj-gst222",
+      "courseId": "course-gst-200",
+      "title": "GST 222: Peace Studies & Conflict Resolution",
+      "description": "Explores positive vs negative peace, conflict analysis, mechanisms of mediation, arbitration, human rights, and national integration."
+    }
+  ],
+  "materials": [
+    {
+      "id": "mat-gst111-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst111",
+      "title": "Study Skills, Active Reading & SQ3R Method",
+      "content": "Effective study skills are critical for undergraduate success. The SQ3R reading method represents: Survey, Question, Read, Recite, and Review. Surveying involves skimming through headings, summaries, and charts to gain an overview. Questioning turns headings into active queries (e.g., changing 'Definition of Logic' to 'What is logic?'). Reading involves active engagement to find answers to those questions. Reciting means speaking or writing down key summaries from memory. Reviewing is the periodic repetition of key concepts over spaced intervals to optimize retention. Paragraphs are basic units of written communication; a standard academic paragraph contains a topic sentence, supporting details, and a concluding or transitioning sentence.",
+      "createdAt": "2026-07-07T22:00:00.000Z"
+    },
+    {
+      "id": "mat-gst113-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst113",
+      "title": "Pre-Colonial Administration & Social Systems",
+      "content": "Pre-colonial Nigerian societies exhibited distinct political structures. In the Hausa-Fulani Emirate system (Northern Nigeria), administration was highly centralized and autocratic, headed by an Emir. The Emir held legislative, executive, and judicial powers, supported by officials like the Waziri (Prime Minister), Galadima, and Madawaki (Army Commander). In the Yoruba Kingdom (Western Nigeria), the system was a centralized constitutional monarchy headed by the Oba (king), who ruled with the support of a council of chiefs called the Oyomesi. The Oyomesi could dethrone a tyrannical Oba through check-and-balance systems including the Ogboni society. In contrast, the Igbo traditional system (Eastern Nigeria) was highly decentralized, egalitarian, and acephalous (stateless), relying on age-grades, title societies (like Ozo), elders' councils (Ama-ala), and oracle systems to maintain social control without a single ruler.",
+      "createdAt": "2026-07-07T22:00:00.000Z"
+    },
+    {
+      "id": "mat-gst222-1",
+      "courseId": "course-gst-200",
+      "subjectId": "subj-gst222",
+      "title": "Concepts of Peace and Conflict Theories",
+      "content": "Peace can be defined in two dimensions: negative peace and positive peace. Negative peace is the simple absence of direct physical violence or active war. Positive peace is the presence of social justice, structural equality, and institutional mechanisms that resolve grievances. Conflict is a natural collision of values, interests, or goals, but it is not inherently violent. Standard conflict theories include: 1. Marxist/Structuralist theory: conflict arises from material inequality and resource scarcity. 2. Human Needs theory (John Burton): conflict occurs when basic human needs (identity, security, recognition) are blocked. 3. Frustration-Aggression theory: conflict is triggered when goals are repeatedly thwarted. Conflict resolution processes include negotiation, mediation (third-party facilitation without decision-making power), and arbitration (third-party decides the binding outcome).",
+      "createdAt": "2026-07-07T22:00:00.000Z"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-gst111-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst111",
+      "materialId": "mat-gst111-1",
+      "text": "What does the first 'S' in the SQ3R study method stand for?",
+      "options": [
+        "Study",
+        "Survey",
+        "Sentence",
+        "Summary"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "SQ3R stands for Survey, Question, Read, Recite, and Review. The first step is to Survey the material to gain a structural overview."
+    },
+    {
+      "id": "q-gst111-2",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst111",
+      "materialId": "mat-gst111-1",
+      "text": "What is the primary function of a topic sentence in an academic paragraph?",
+      "options": [
+        "To provide a dramatic transition to the next chapter",
+        "To introduce the central controlling idea of the paragraph",
+        "To list all relevant references and external citations",
+        "To conclude the essay with a personal signature"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "The topic sentence states the primary controlling idea of the paragraph, which the other sentences support and elaborate upon."
+    },
+    {
+      "id": "q-gst113-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst113",
+      "materialId": "mat-gst113-1",
+      "text": "Which of the following pre-colonial political systems in Nigeria was characterized as decentralized, egalitarian, and acephalous?",
+      "options": [
+        "The Hausa-Fulani Emirate",
+        "The Oyo Empire",
+        "The Igbo traditional political system",
+        "The Benin Kingdom"
+      ],
+      "correctAnswerIndex": 2,
+      "explanation": "The traditional Igbo political system lacked a single centralized ruler (stateless/acephalous) and instead relied on a democratic network of elders, title societies, and age-grades."
+    },
+    {
+      "id": "q-gst113-2",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst113",
+      "materialId": "mat-gst113-1",
+      "text": "In the pre-colonial Yoruba administration, which group of chiefs held the constitutional power to check and impeach a tyrannical Alaafin (Oba)?",
+      "options": [
+        "The Waziri council",
+        "The Oyomesi council",
+        "The Ama-ala assembly",
+        "The Ozo society"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "The Oyomesi was the supreme council of state consisting of seven chief kingmakers, who held the power to reject or impeach an autocratic Oba."
+    },
+    {
+      "id": "q-gst222-1",
+      "courseId": "course-gst-200",
+      "subjectId": "subj-gst222",
+      "materialId": "mat-gst222-1",
+      "text": "How is 'Positive Peace' defined in General Studies conflict modules?",
+      "options": [
+        "The simple absence of active military warfare",
+        "An enforced period of peace through aggressive police deterrence",
+        "The presence of social justice, structural equality, and institutional fairness",
+        "A temporary truce signed between warring ethnic factions"
+      ],
+      "correctAnswerIndex": 2,
+      "explanation": "Positive peace addresses structural violence and represents the presence of justice, equity, and cooperation, rather than just the absence of direct physical violence (negative peace)."
+    },
+    {
+      "id": "q-gst222-2",
+      "courseId": "course-gst-200",
+      "subjectId": "subj-gst222",
+      "materialId": "mat-gst222-1",
+      "text": "Which conflict resolution mechanism involves a neutral third party facilitating communication but lacking the power to impose a binding decision?",
+      "options": [
+        "Arbitration",
+        "Mediation",
+        "Litigation",
+        "Inquisition"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "In mediation, a neutral mediator helps parties find a voluntary mutual agreement. In arbitration, the arbitrator imposes a final binding decision."
+    },
+    {
+      "id": "q-gst112-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst112",
+      "text": "Which informal fallacy is committed when an arguer attacks the opponent's personality instead of addressing the core of their argument?",
+      "options": [
+        "Strawman fallacy",
+        "Ad Hominem fallacy",
+        "Red Herring fallacy",
+        "Slippery Slope fallacy"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "An Ad Hominem fallacy (Latin for 'to the man') discredits an argument by attacking the arguer's personal character or status rather than the logic itself."
+    }
+  ],
+  "results": [],
+  "studyGuides": [
+    {
+      "id": "guide-gst111-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst111",
+      "materialId": "mat-gst111-1",
+      "title": "GST 111 Study Guide: Master SQ3R & Paragraph Structures",
+      "summary": "This guide breaks down essential study skills and paragraph structure required for Nigerian university General Studies examinations. By mastering the SQ3R system, undergraduates can maximize active retention and recall, translating to exceptional performance in university computer-based tests (CBT).",
+      "keyPoints": [
+        "The SQ3R reading system is divided into Survey, Question, Read, Recite, and Review.",
+        "Active reading demands transforming passive headers into active questions before reading.",
+        "A standard university academic paragraph is composed of a clear topic sentence, supporting facts, and a transitioning summary.",
+        "Spaced retrieval practice (Reviewing) is the single most effective way to transfer knowledge to long-term memory."
+      ],
+      "vocabulary": [
+        { "term": "SQ3R", "definition": "A classical active study method representing Survey, Question, Read, Recite, and Review." },
+        { "term": "Topic Sentence", "definition": "A sentence that states the primary, controlling idea of a paragraph." },
+        { "term": "Spaced Repetition", "definition": "Reviewing material at increasing intervals of time to optimize brain retention." }
+      ],
+      "practiceFlashcards": [
+        { "question": "What are the five steps of the SQ3R study system?", "answer": "Survey, Question, Read, Recite, and Review." },
+        { "question": "True or False: A topic sentence should always be placed at the very end of a paragraph.", "answer": "False. It is usually placed at or near the beginning of a paragraph." },
+        { "question": "What is the difference between active and passive reading?", "answer": "Active reading involves questioning and summarizing, whereas passive reading is just scanning words." }
+      ]
+    },
+    {
+      "id": "guide-gst113-1",
+      "courseId": "course-gst-100",
+      "subjectId": "subj-gst113",
+      "materialId": "mat-gst113-1",
+      "title": "GST 113 Study Guide: Pre-Colonial Political Administrations",
+      "summary": "An overview of the unique systems of governance in pre-colonial Nigeria. This study guide contrasts the centralized autocratic emirates of the North, the constitutional checks and balances of the Yoruba obas, and the highly decentralized egalitarian age-grade systems of the Igbos.",
+      "keyPoints": [
+        "The Hausa-Fulani Emirate was a highly centralized, administrative system ruled by an Emir.",
+        "The Yoruba pre-colonial system was a constitutional monarchy where the Oba ruled with checks from the Oyomesi chief council.",
+        "The pre-colonial Igbo society was acephalous (meaning stateless or decentralized), using age-grades and Ama-ala councils rather than kings.",
+        "Traditional checks-and-balances systems ensured that leaders who abused power were held accountable by local secret or elder groups."
+      ],
+      "vocabulary": [
+        { "term": "Acephalous", "definition": "A stateless or decentralized system of governance lacking a single political head or king." },
+        { "term": "Oyomesi", "definition": "The powerful council of seven kingmakers in the traditional Oyo Empire." },
+        { "term": "Waziri", "definition": "The senior administrative officer or Prime Minister in the traditional Hausa-Fulani Emirate." }
+      ],
+      "practiceFlashcards": [
+        { "question": "What is meant by the term 'acephalous society'?", "answer": "A stateless society governed democratically without a single king or monarch (e.g., traditional Igbo system)." },
+        { "question": "What was the supreme council of state in the Yoruba Oyo Empire called?", "answer": "The Oyomesi." },
+        { "question": "Who was the administrative Prime Minister in the pre-colonial Northern emirates?", "answer": "The Waziri." }
+      ]
+    }
+  ]
+}

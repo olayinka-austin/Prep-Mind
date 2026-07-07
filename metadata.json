@@ -1,0 +1,6 @@
+{
+  "name": "CBT Prep Platform",
+  "description": "A mobile-responsive computer-based test (CBT) preparation platform with AI-powered study guides, quiz generation, practice exams, and Paystack integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
