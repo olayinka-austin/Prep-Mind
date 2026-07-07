@@ -96,58 +96,58 @@ export default function HistoryDashboard({ results }: HistoryDashboardProps) {
       {/* Stats Cards Bento-grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Avg Score */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
-          <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
+          <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450">
             <TrendingUp className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Score</p>
-            <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Average Score</p>
+            <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
               {averageScore}%
             </h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Overall mean performance</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Overall mean performance</p>
           </div>
         </div>
 
         {/* Card 2: Highest Score */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
-          <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
+          <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-450">
             <Trophy className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Peak Score</p>
-            <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Peak Score</p>
+            <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
               {highestScore}%
             </h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Your highest single test</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Your highest single test</p>
           </div>
         </div>
 
         {/* Card 3: Pass Rate */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
-          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
+          <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450">
             <Award className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CBT Pass Rate</p>
-            <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CBT Pass Rate</p>
+            <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
               {passRate}%
             </h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Scores 50% and above</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Scores 50% and above</p>
           </div>
         </div>
 
         {/* Card 4: Total Attempts */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
-          <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center gap-4 shadow-2xs hover:shadow-xs transition duration-200">
+          <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-450">
             <Activity className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Attempts</p>
-            <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Attempts</p>
+            <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
               {totalAttempts}
             </h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
               {practiceCount} Practice • {examCount} Exam
             </p>
           </div>
@@ -155,13 +155,13 @@ export default function HistoryDashboard({ results }: HistoryDashboardProps) {
       </div>
 
       {/* Recharts Progress Graph */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4 mb-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-800 tracking-tight">CBT Progress Analytics</h3>
-            <p className="text-xs text-slate-500">Chronological analysis of test scores and cumulative performance trends</p>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-tight">CBT Progress Analytics</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Chronological analysis of test scores and cumulative performance trends</p>
           </div>
-          <div className="flex gap-4 text-xs font-semibold text-slate-500">
+          <div className="flex gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-1.5 rounded-full bg-blue-600"></span>
               Attempt Score
@@ -179,7 +179,7 @@ export default function HistoryDashboard({ results }: HistoryDashboardProps) {
               data={chartData}
               margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-100 dark:text-slate-800/80" />
               <XAxis
                 dataKey="attemptLabel"
                 stroke="#94a3b8"
@@ -195,10 +195,10 @@ export default function HistoryDashboard({ results }: HistoryDashboardProps) {
                 axisLine={false}
                 tickFormatter={(val) => `${val}%`}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeWidth: 1, className: "text-slate-200 dark:text-slate-700" }} />
               
               {/* Pass score indicator at 50% */}
-              <ReferenceLine y={50} stroke="#e2e8f0" strokeDasharray="4 4" label={{ value: 'Pass Line (50%)', fill: '#94a3b8', fontSize: 10, position: 'insideBottomRight' }} />
+              <ReferenceLine y={50} stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeDasharray="4 4" label={{ value: 'Pass Line (50%)', fill: '#94a3b8', fontSize: 10, position: 'insideBottomRight' }} />
 
               <Line
                 name="Score"

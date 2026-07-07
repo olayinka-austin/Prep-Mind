@@ -7,14 +7,49 @@ import QuizPlayer from "./components/QuizPlayer";
 import StudyGuideViewer from "./components/StudyGuideViewer";
 import PaystackCheckout from "./components/PaystackCheckout";
 import HistoryDashboard from "./components/HistoryDashboard";
+import AccountPanel from "./components/AccountPanel";
 import { ShieldCheck, BookOpen, UserPlus, LogIn, Mail, Lock, User as UserIcon, Loader2, Sparkles, Star, Trophy, ArrowRight, ShieldAlert, Chrome } from "lucide-react";
 import { auth, googleProvider } from "./lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
 export default function App() {
+  // Theme state
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const cached = localStorage.getItem("cbt_theme");
+      if (cached === "dark" || cached === "light") return cached;
+    } catch {}
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    try {
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("cbt_theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("cbt_theme", "light");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
   // Auth state
   const [token, setToken] = useState<string | null>(localStorage.getItem("cbt_token"));
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem("cbt_user");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -25,8 +60,22 @@ export default function App() {
   const [name, setName] = useState("");
 
   // Syllabus state
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [courses, setCourses] = useState<Course[]>(() => {
+    try {
+      const cached = localStorage.getItem("cbt_courses");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    try {
+      const cached = localStorage.getItem("cbt_subjects");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [syllabusLoading, setSyllabusLoading] = useState(true);
 
   // Active workspace states
@@ -42,7 +91,14 @@ export default function App() {
 
   // Loaders
   const [questionsLoading, setQuestionsLoading] = useState(false);
-  const [historyResults, setHistoryResults] = useState<ExamResult[]>([]);
+  const [historyResults, setHistoryResults] = useState<ExamResult[]>(() => {
+    try {
+      const cached = localStorage.getItem("cbt_results");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [examTimeLeft, setExamTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -64,13 +120,16 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+        localStorage.setItem("cbt_user", JSON.stringify(data.user));
         fetchHistoryResults();
+        fetchAndCacheAllQuestions();
       } else {
         // Stale token
         handleLogout();
       }
     } catch (err) {
       console.error("Failed to load user session", err);
+      // Keep cached session if offline
     } finally {
       setAuthLoading(false);
     }
@@ -83,6 +142,8 @@ export default function App() {
         const data = await response.json();
         setCourses(data.courses);
         setSubjects(data.subjects);
+        localStorage.setItem("cbt_courses", JSON.stringify(data.courses));
+        localStorage.setItem("cbt_subjects", JSON.stringify(data.subjects));
       }
     } catch (err) {
       console.error("Failed to load syllabus catalogs", err);
@@ -100,20 +161,53 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setHistoryResults(data.results);
+        localStorage.setItem("cbt_results", JSON.stringify(data.results));
       }
     } catch (err) {
       console.error("Failed to load history results", err);
     }
   };
 
+  const fetchAndCacheAllQuestions = async () => {
+    if (!token || !navigator.onLine) return;
+    try {
+      const response = await fetch("/api/questions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const questionsList = data.questions;
+        const grouped: { [subjectId: string]: any[] } = {};
+        if (Array.isArray(questionsList)) {
+          questionsList.forEach((q: any) => {
+            if (!grouped[q.subjectId]) {
+              grouped[q.subjectId] = [];
+            }
+            grouped[q.subjectId].push(q);
+          });
+          localStorage.setItem("cbt_questions_by_subject", JSON.stringify(grouped));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to pre-fetch and cache questions", err);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("cbt_token");
+    localStorage.removeItem("cbt_user");
+    localStorage.removeItem("cbt_courses");
+    localStorage.removeItem("cbt_subjects");
+    localStorage.removeItem("cbt_results");
+    localStorage.removeItem("cbt_materials");
+    localStorage.removeItem("cbt_questions_by_subject");
     setToken(null);
     setUser(null);
     setCurrentView("dashboard");
     setActiveCourse(null);
     setActiveSubject(null);
     setActiveMaterial(null);
+    setActiveQuizQuestions([]);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -235,17 +329,48 @@ export default function App() {
     setActiveQuizMode(mode);
 
     try {
-      const response = await fetch(`/api/questions?subjectId=${subject.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      let questionsList: any[] = [];
 
-      if (response.ok) {
-        const data = await response.json();
-        setActiveQuizQuestions(data.questions);
-        setCurrentView("quiz");
+      if (navigator.onLine) {
+        try {
+          const response = await fetch(`/api/questions?subjectId=${subject.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            questionsList = data.questions || [];
+
+            // Cache these questions specifically in localStorage
+            try {
+              const cachedMap = JSON.parse(localStorage.getItem("cbt_questions_by_subject") || "{}");
+              cachedMap[subject.id] = questionsList;
+              localStorage.setItem("cbt_questions_by_subject", JSON.stringify(cachedMap));
+            } catch (err) {
+              console.error("Error updating local questions cache", err);
+            }
+          } else {
+            throw new Error(`Server returned status ${response.status}`);
+          }
+        } catch (fetchErr) {
+          console.warn("Could not fetch questions online, attempting fallback", fetchErr);
+          const cachedMap = JSON.parse(localStorage.getItem("cbt_questions_by_subject") || "{}");
+          questionsList = cachedMap[subject.id] || [];
+        }
+      } else {
+        const cachedMap = JSON.parse(localStorage.getItem("cbt_questions_by_subject") || "{}");
+        questionsList = cachedMap[subject.id] || [];
       }
-    } catch (err) {
+
+      if (questionsList && questionsList.length > 0) {
+        setActiveQuizQuestions(questionsList);
+        setCurrentView("quiz");
+      } else {
+        alert("No cached questions found for this subject. Please connect to the internet to load questions for the first time.");
+      }
+    } catch (err: any) {
       console.error("Failed to load questions", err);
+      alert(`Failed to load questions: ${err.message || err || "Connection error."}`);
     } finally {
       setQuestionsLoading(false);
     }
@@ -284,7 +409,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col justify-between text-slate-800">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans flex flex-col justify-between text-slate-800 dark:text-slate-100 transition-colors duration-200">
       {/* Navbar overlay */}
       <Navbar
         user={user}
@@ -299,9 +424,11 @@ export default function App() {
         currentView={currentView}
         onShowUpgrade={() => setShowPaystack(true)}
         examTimeLeft={examTimeLeft}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className={`flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 ${user && currentView !== "quiz" && currentView !== "study" ? "pb-24 sm:pb-8" : "pb-8"}`}>
         {/* If Loading Auth State */}
         {authLoading && !user ? (
           <div className="flex flex-col items-center justify-center py-40 space-y-4">
@@ -311,16 +438,16 @@ export default function App() {
         ) : !user ? (
           /* Authentication Screen (Signup / Login) */
           <div className="max-w-md mx-auto my-8" id="auth-box">
-            <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden p-6 sm:p-8 space-y-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-md overflow-hidden p-6 sm:p-8 space-y-6 transition-colors duration-200">
               {/* Logo / Heading */}
               <div className="text-center space-y-1.5">
-                <div className="inline-flex bg-blue-50 text-blue-600 p-3 rounded-xl">
+                <div className="inline-flex bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 p-3 rounded-xl">
                   <ShieldCheck className="h-6 w-6" />
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-800">
+                <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
                   {authView === "login" ? "Welcome Back Student" : "Register Student Account"}
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {authView === "login"
                     ? "Enter your details below to access your CBT test materials"
                     : "Create a prep syllabus account and start AI study programs"}
@@ -328,7 +455,7 @@ export default function App() {
               </div>
 
               {authError && (
-                <div className="p-3.5 bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold rounded-xl text-center">
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-xl text-center">
                   {authError}
                 </div>
               )}
@@ -337,9 +464,9 @@ export default function App() {
               {authView === "login" ? (
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email Address</label>
+                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Email Address</label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
                         <Mail className="h-4 w-4" />
                       </span>
                       <input
@@ -347,16 +474,16 @@ export default function App() {
                         placeholder="yourname@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-600"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Password</label>
+                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Password</label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
                         <Lock className="h-4 w-4" />
                       </span>
                       <input
@@ -364,7 +491,7 @@ export default function App() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-600"
                         required
                       />
                     </div>
@@ -382,9 +509,9 @@ export default function App() {
               ) : (
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Full Name</label>
+                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Full Name</label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
                         <UserIcon className="h-4 w-4" />
                       </span>
                       <input
@@ -392,16 +519,16 @@ export default function App() {
                         placeholder="Austin Olayinka"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-600"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email Address</label>
+                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Email Address</label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
                         <Mail className="h-4 w-4" />
                       </span>
                       <input
@@ -409,16 +536,16 @@ export default function App() {
                         placeholder="yourname@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-600"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Password</label>
+                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Password</label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
                         <Lock className="h-4 w-4" />
                       </span>
                       <input
@@ -426,7 +553,7 @@ export default function App() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-600"
                         required
                       />
                     </div>
@@ -446,35 +573,35 @@ export default function App() {
               {/* OR Divider and Google Auth Button */}
               <div className="space-y-4">
                 <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-slate-200"></div>
-                  <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Or continue with</span>
-                  <div className="flex-grow border-t border-slate-200"></div>
+                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                  <span className="flex-shrink mx-4 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">Or continue with</span>
+                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={authLoading}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 border border-slate-200 rounded-xl text-xs shadow-xs transition flex justify-center items-center gap-2 cursor-pointer"
+                  className="w-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-xs shadow-xs transition flex justify-center items-center gap-2 cursor-pointer"
                   id="google-signin-btn"
                 >
                   {authLoading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
                   ) : (
-                    <Chrome className="h-3.5 w-3.5 text-blue-600" />
+                    <Chrome className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                   )}
                   <span>Continue with Google</span>
                 </button>
               </div>
 
               {/* View Switch Link */}
-              <div className="text-center border-t border-slate-200 pt-4">
+              <div className="text-center border-t border-slate-200 dark:border-slate-800 pt-4">
                 <button
                   onClick={() => {
                     setAuthView(authView === "login" ? "signup" : "login");
                     setAuthError("");
                   }}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 mx-auto cursor-pointer"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold flex items-center gap-1 mx-auto cursor-pointer"
                 >
                   {authView === "login" ? (
                     <>
@@ -638,6 +765,22 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            ) : currentView === "account" && user ? (
+              <AccountPanel
+                user={user}
+                onLogout={handleLogout}
+                onNavigate={(view) => {
+                  setCurrentView(view);
+                  setActiveMaterial(null);
+                  setActiveCourse(null);
+                  setActiveSubject(null);
+                  setExamTimeLeft(null);
+                }}
+                onShowUpgrade={() => setShowPaystack(true)}
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+                results={historyResults}
+              />
             ) : (
               <div className="text-center py-20 bg-white border border-slate-200 rounded-xl max-w-sm mx-auto space-y-4">
                 <ShieldAlert className="h-10 w-10 text-rose-500 mx-auto" />

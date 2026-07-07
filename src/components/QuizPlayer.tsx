@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Question, Course, Subject, ExamResult, User } from "../types";
 import { motion, AnimatePresence } from "motion/react";
-import { Timer, AlertTriangle, ChevronLeft, ChevronRight, Check, X, ShieldAlert, Star, Trophy, Award, BookOpen } from "lucide-react";
+import { Timer, AlertTriangle, ChevronLeft, ChevronRight, Check, X, ShieldAlert, Star, Trophy, Award, BookOpen, Flag, Lightbulb, Bookmark } from "lucide-react";
 
 interface QuizPlayerProps {
   user: User;
@@ -31,11 +31,13 @@ export default function QuizPlayer({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [qId: string]: number }>({});
   const [submittedAnswers, setSubmittedAnswers] = useState<{ [qId: string]: boolean }>({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState<{ [qId: string]: boolean }>({});
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
   const [isCompleted, setIsCompleted] = useState(false);
   const [savedResult, setSavedResult] = useState<ExamResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // Lock Exam Mode if user is not Premium
   const isLocked = mode === "exam" && !user.isPremium;
@@ -241,43 +243,79 @@ export default function QuizPlayer({
   if (isCompleted) {
     const { correct, total, percentage } = calculateScore();
     return (
-      <div className="max-w-4xl mx-auto space-y-8" id="exam-results-screen">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden p-6 sm:p-8 text-center space-y-6">
-          <div className="inline-flex bg-blue-50 p-4 rounded-full border border-blue-100 text-blue-600">
-            {percentage >= 50 ? <Trophy className="h-12 w-12" /> : <Award className="h-12 w-12 text-slate-500" />}
+      <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn" id="exam-results-screen">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden p-6 sm:p-10 text-center space-y-6 transition-all duration-200">
+          <div className="inline-flex bg-linear-to-b from-amber-100 to-amber-200/40 dark:from-amber-950/20 dark:to-slate-900 p-5 rounded-full border border-amber-200 dark:border-amber-900/60 text-amber-500 relative">
+            {percentage >= 50 ? (
+              <>
+                <Trophy className="h-16 w-16 text-amber-500 fill-amber-300 animate-bounce" />
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-1 shadow-sm">
+                  <Star className="h-4.5 w-4.5 fill-white text-white" />
+                </span>
+              </>
+            ) : (
+              <Award className="h-16 w-16 text-slate-400 dark:text-slate-500" />
+            )}
           </div>
           <div>
-            <div className="text-[10px] font-bold text-blue-600 tracking-widest uppercase">{mode === "exam" ? "CBT Mock Exam Completed" : "Practice Session Completed"}</div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 mt-1">{subject.title} Summary</h2>
-            <p className="text-xs text-slate-400 mt-1">{course.title}</p>
+            <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest uppercase">
+              {mode === "exam" ? "🏆 CBT Mock Exam Finished" : "🎯 Practice Chapter Deck Cleared"}
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-white mt-1.5 tracking-tight">
+              {percentage >= 50 ? "Excellent Job! 🎉" : "Keep Learning! 💪"}
+            </h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-md mx-auto">
+              You just finished reviewing <strong className="text-slate-700 dark:text-slate-300">{subject.title}</strong> of the course syllabus. Here are your final metrics:
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto py-2">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div className="text-xl sm:text-2xl font-black text-slate-800">{percentage}%</div>
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Final Score</div>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-md mx-auto py-2">
+            <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{percentage}%</div>
+              <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Accuracy</div>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div className="text-xl sm:text-2xl font-black text-blue-600">{correct}</div>
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Correct</div>
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/40">
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{correct}</div>
+              <div className="text-[9px] font-black text-emerald-500 dark:text-emerald-500 uppercase tracking-widest mt-1">Correct</div>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div className="text-xl sm:text-2xl font-black text-slate-500">{total}</div>
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Questions</div>
+            <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="text-2xl sm:text-3xl font-black text-slate-600 dark:text-slate-400">{total}</div>
+              <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Questions</div>
             </div>
           </div>
 
-          {/* Performance Review Status */}
-          <div className="p-4 rounded-xl border text-sm max-w-lg mx-auto leading-relaxed font-medium bg-blue-50/50 border-blue-100 text-blue-800">
-            {percentage >= 75
-              ? "Excellent performance! You have high conceptual mastery and are fully prepared for the actual national exams."
-              : percentage >= 50
-              ? "Good job! You passed the baseline, but reviewing the key concepts and taking another test will solidify your A."
-              : "Needs improvement. Use the study mode to read materials and generate custom study guides, then retry."}
+          {/* Gamified Advice Block based on performance */}
+          <div className="p-4.5 rounded-2xl border text-xs sm:text-sm max-w-lg mx-auto leading-relaxed font-semibold bg-linear-to-r from-blue-50/60 to-indigo-50/20 dark:from-slate-850 dark:to-slate-850/60 border-blue-100 dark:border-slate-800 text-blue-800 dark:text-blue-300">
+            {percentage >= 90 ? (
+              "🏆 Absolute Gold Medal Standard! Your conceptual retention is top-tier. You are 100% prepared to hit an A grade in the actual examinations!"
+            ) : percentage >= 70 ? (
+              "🌟 Superb Grade Standard! Excellent retention. With a score of over 70%, you are comfortably in the straight A's zone. Keep practicing!"
+            ) : percentage >= 50 ? (
+              "👍 Solid Base! You passed, but a quick revisit of the active study slides and another quiz session will securely push you to 90% accuracy!"
+            ) : (
+              "📚 A Great Stepping Stone! GST courses test tricky words. Open the Study Guides to check the flash summaries first, then smash this quiz again!"
+            )}
           </div>
 
-          <div className="flex justify-center">
-            <button onClick={onBack} className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                // reset quiz state to retry
+                setCurrentIndex(0);
+                setSelectedAnswers({});
+                setSubmittedAnswers({});
+                setFlaggedQuestions({});
+                setIsCompleted(false);
+                setTimeLeft(600);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
+            >
+              Retry Session 🔄
+            </button>
+            <button
+              onClick={onBack}
+              className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+            >
               Return to Dashboard
             </button>
           </div>
@@ -285,59 +323,68 @@ export default function QuizPlayer({
 
         {/* Question-by-Question Review Breakdown */}
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-slate-500" />
-            Detailed Review Breakdown
+          <h3 className="font-extrabold text-slate-800 dark:text-white text-base flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            Active Practice Review & Explanations
           </h3>
+
           <div className="space-y-4">
             {questions.map((q, idx) => {
               const selectedOpt = selectedAnswers[q.id];
               const isCorrect = selectedOpt === q.correctAnswerIndex;
               return (
-                <div key={q.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
+                <div key={q.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs space-y-4">
                   <div className="flex justify-between items-start gap-4">
-                    <div className="flex gap-2 text-sm text-slate-800 font-bold leading-normal">
-                      <span className="text-slate-400">Q{idx + 1}.</span>
+                    <div className="flex gap-2 text-sm text-slate-800 dark:text-slate-200 font-extrabold leading-normal">
+                      <span className="text-slate-400 dark:text-slate-500 font-black">Q{idx + 1}.</span>
                       <p>{q.text}</p>
                     </div>
                     {selectedOpt === undefined ? (
-                      <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-md flex-none uppercase">Unanswered</span>
+                      <span className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 text-[9px] font-black px-2.5 py-1 rounded-md flex-none uppercase tracking-wider border border-amber-200/50">Unanswered</span>
                     ) : isCorrect ? (
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-md flex-none uppercase flex items-center gap-1">
-                        <Check className="h-3 w-3" /> Correct
+                      <span className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 text-[9px] font-black px-2.5 py-1 rounded-md flex-none uppercase tracking-wider flex items-center gap-1 border border-emerald-200/50">
+                        <Check className="h-3.5 w-3.5" /> Correct
                       </span>
                     ) : (
-                      <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-1 rounded-md flex-none uppercase flex items-center gap-1">
-                        <X className="h-3 w-3" /> Incorrect
+                      <span className="bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-400 text-[9px] font-black px-2.5 py-1 rounded-md flex-none uppercase tracking-wider flex items-center gap-1 border border-rose-200/50">
+                        <X className="h-3.5 w-3.5" /> Incorrect
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     {q.options.map((opt, oIdx) => {
                       const isOptionSelected = selectedOpt === oIdx;
                       const isCorrectOption = q.correctAnswerIndex === oIdx;
 
-                      let optStyle = "bg-slate-50 text-slate-700 border-slate-200";
+                      let optStyle = "bg-slate-50 dark:bg-slate-850 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800";
                       if (isOptionSelected) {
-                        optStyle = isCorrect ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200";
+                        optStyle = isCorrect
+                          ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-850"
+                          : "bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-300 border-rose-300 dark:border-rose-850";
                       } else if (isCorrectOption) {
-                        optStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                        optStyle = "bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-850";
                       }
 
                       return (
-                        <div key={oIdx} className={`border p-3 rounded-xl text-xs font-semibold flex items-center justify-between ${optStyle}`}>
-                          <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                          {isCorrectOption && <Check className="h-4 w-4 text-emerald-600 flex-none ml-2" />}
+                        <div key={oIdx} className={`border p-3.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${optStyle}`}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-black text-slate-400 dark:text-slate-500">{String.fromCharCode(65 + oIdx)}.</span>
+                            <span>{opt}</span>
+                          </span>
+                          {isCorrectOption && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-none ml-2" />}
                         </div>
                       );
                     })}
                   </div>
 
                   {/* Explanation card */}
-                  <div className="bg-blue-50/40 p-4 border border-blue-100 rounded-xl space-y-1">
-                    <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">CBT Concept Feedback:</div>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">{q.explanation}</p>
+                  <div className="bg-blue-50/25 dark:bg-blue-950/10 p-4 border border-blue-100/60 dark:border-blue-900/30 rounded-xl space-y-1.5">
+                    <div className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1">
+                      <Lightbulb className="h-3.5 w-3.5 text-blue-500" />
+                      CBT Concept Feedback:
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">{q.explanation}</p>
                   </div>
                 </div>
               );
@@ -348,20 +395,22 @@ export default function QuizPlayer({
     );
   }
 
+  const isFlagged = flaggedQuestions[currentQuestion.id];
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6" id="quiz-player-active">
+    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn" id="quiz-player-active">
       {/* Quiz/Exam Header Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-colors">
         <div>
-          <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-            {mode === "exam" ? "TIMED CBT EXAM MODE" : "STUDY PRACTICE MODE"}
+          <span className="bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider border border-blue-200/20">
+            {mode === "exam" ? "⏱️ TIMED CBT EXAM RUN" : "🎯 PRACTICE LEARNING MODE"}
           </span>
-          <h2 className="text-lg font-black text-slate-800 mt-1.5">{subject.title}</h2>
-          <p className="text-xs text-slate-400">{course.title}</p>
+          <h2 className="text-base sm:text-lg font-black text-slate-800 dark:text-white mt-1.5 leading-snug">{subject.title}</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{course.title}</p>
         </div>
 
         {mode === "exam" && (
-          <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 font-bold px-4 py-2 rounded-xl text-sm flex-none">
+          <div className="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 font-extrabold px-4 py-2.5 rounded-xl text-sm flex-none">
             <Timer className="h-4.5 w-4.5 animate-pulse" />
             <span>{formatTime(timeLeft)}</span>
           </div>
@@ -370,26 +419,34 @@ export default function QuizPlayer({
 
       {/* CBT Nav Grid for Exam Mode */}
       {mode === "exam" && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2.5">Question Navigation Grid</div>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4.5 shadow-2xs">
+          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Syllabus Grid Navigation</div>
+          <div className="flex flex-wrap gap-2">
             {questions.map((q, idx) => {
               const isSelected = selectedAnswers[q.id] !== undefined;
               const isActive = currentIndex === idx;
+              const isQFlagged = flaggedQuestions[q.id];
+
+              let cellStyle = "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-755";
+              if (isActive) {
+                cellStyle = "bg-blue-600 text-white font-black scale-105 shadow-xs";
+              } else if (isQFlagged) {
+                cellStyle = "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-300/40 font-bold";
+              } else if (isSelected) {
+                cellStyle = "bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 font-bold";
+              }
+
               return (
                 <button
                   key={q.id}
                   onClick={() => setCurrentIndex(idx)}
-                  className={`h-9 w-9 text-xs font-bold rounded-lg cursor-pointer transition flex items-center justify-center ${
-                    isActive
-                       ? "bg-slate-800 text-white"
-                       : isSelected
-                       ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                       : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                  }`}
+                  className={`h-9 w-9 text-xs font-bold rounded-lg cursor-pointer transition-all duration-150 flex items-center justify-center relative ${cellStyle}`}
                   id={`nav-grid-${idx}`}
                 >
                   {idx + 1}
+                  {isQFlagged && !isActive && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 rounded-full h-2 w-2 block" />
+                  )}
                 </button>
               );
             })}
@@ -398,50 +455,90 @@ export default function QuizPlayer({
       )}
 
       {/* Active Question Panel */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 sm:p-8 space-y-6">
-        <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-          <span>QUESTION {currentIndex + 1} OF {questions.length}</span>
-          {mode === "practice" && (
-            <span className="text-blue-600">
-              Score: {calculateScore().correct}/{currentIndex + (isAnsweredInPractice ? 1 : 0)}
-            </span>
-          )}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
+        {/* Top visual progress bar indicator */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <span>QUESTION {currentIndex + 1} OF {questions.length}</span>
+            {mode === "practice" && (
+              <span className="text-blue-600 dark:text-blue-400 font-black">
+                Progress: {calculateScore().correct}/{currentIndex + (isAnsweredInPractice ? 1 : 0)} Correct
+              </span>
+            )}
+          </div>
+          <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-300"
+              style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+            />
+          </div>
         </div>
 
-        <h3 className="text-base sm:text-lg font-black text-slate-800 leading-snug">
-          {currentQuestion.text}
-        </h3>
+        {/* Flag button container */}
+        <div className="flex justify-between items-start gap-4">
+          <h3 className="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white leading-snug">
+            {currentQuestion.text}
+          </h3>
 
-        {/* Options */}
+          <button
+            onClick={() => {
+              setFlaggedQuestions((prev) => ({
+                ...prev,
+                [currentQuestion.id]: !prev[currentQuestion.id],
+              }));
+            }}
+            className={`p-2 rounded-xl border flex-none transition cursor-pointer ${
+              isFlagged
+                ? "bg-amber-50 dark:bg-amber-950/20 border-amber-300 text-amber-600 dark:text-amber-400"
+                : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600"
+            }`}
+            title="Flag/Bookmark question to return later"
+          >
+            <Flag className={`h-4.5 w-4.5 ${isFlagged ? "fill-amber-500 text-amber-500" : ""}`} />
+          </button>
+        </div>
+
+        {/* Options Selection list with animated circular index keys */}
         <div className="grid grid-cols-1 gap-3.5">
           {currentQuestion.options.map((option, oIdx) => {
             const isOptionSelected = userSelection === oIdx;
             const isCorrectOption = currentQuestion.correctAnswerIndex === oIdx;
 
-            let optionStyle = "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white text-slate-700";
+            let optionStyle = "border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 hover:bg-slate-50/50 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200";
+            let badgeStyle = "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
+
             if (isOptionSelected) {
               if (mode === "practice") {
-                optionStyle = isCorrectOption
-                  ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                  : "bg-rose-50 border-rose-300 text-rose-800";
+                if (isCorrectOption) {
+                  optionStyle = "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 text-emerald-900 dark:text-emerald-300";
+                  badgeStyle = "bg-emerald-600 text-white";
+                } else {
+                  optionStyle = "bg-rose-50 dark:bg-rose-950/30 border-rose-400 text-rose-900 dark:text-rose-300";
+                  badgeStyle = "bg-rose-600 text-white";
+                }
               } else {
-                optionStyle = "bg-slate-800 border-slate-800 text-white";
+                optionStyle = "bg-blue-600 border-blue-600 text-white";
+                badgeStyle = "bg-white text-blue-600";
               }
             } else if (mode === "practice" && isAnsweredInPractice && isCorrectOption) {
-              optionStyle = "bg-emerald-50 border-emerald-300 text-emerald-800 animate-pulse";
+              optionStyle = "bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-300 text-emerald-850 dark:text-emerald-300";
+              badgeStyle = "bg-emerald-500 text-white";
             }
 
             return (
-              <button
+              <motion.button
+                whileTap={{ scale: mode === "practice" && isAnsweredInPractice ? 1 : 0.985 }}
                 key={oIdx}
                 disabled={mode === "practice" && isAnsweredInPractice}
                 onClick={() => selectOption(oIdx)}
-                className={`w-full text-left p-4 rounded-xl border text-sm font-semibold transition cursor-pointer flex items-center justify-between ${optionStyle}`}
+                className={`w-full text-left p-4.5 rounded-xl border text-xs sm:text-sm font-semibold transition flex items-center justify-between gap-4 cursor-pointer ${optionStyle}`}
                 id={`option-${oIdx}`}
               >
-                <span>
-                  <span className="mr-3 font-extrabold text-slate-400">{String.fromCharCode(65 + oIdx)}.</span>
-                  {option}
+                <span className="flex items-center gap-3">
+                  <span className={`h-7 w-7 rounded-full text-xs font-black flex items-center justify-center flex-none shadow-2xs ${badgeStyle}`}>
+                    {String.fromCharCode(65 + oIdx)}
+                  </span>
+                  <span>{option}</span>
                 </span>
 
                 {mode === "practice" && isAnsweredInPractice && isCorrectOption && (
@@ -450,7 +547,7 @@ export default function QuizPlayer({
                 {mode === "practice" && isAnsweredInPractice && isOptionSelected && !isCorrectOption && (
                   <X className="h-5 w-5 text-rose-600 flex-none" />
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -460,24 +557,24 @@ export default function QuizPlayer({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-50/50 border border-blue-200 p-4 rounded-xl space-y-2"
+            className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/40 p-4 rounded-xl space-y-2"
           >
-            <div className="text-xs font-bold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
-              <Check className="h-4 w-4" />
-              Explanation & Study Concepts
+            <div className="text-xs font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+              <Lightbulb className="h-4 w-4 text-blue-500" />
+              Tutor Explanation & Concept Tips
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
               {currentQuestion.explanation}
             </p>
           </motion.div>
         )}
 
         {/* Navigation Action Buttons */}
-        <div className="flex justify-between items-center border-t border-slate-100 pt-6">
+        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-6">
           <button
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className="flex items-center gap-1 px-4 py-2 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 text-slate-600 font-bold text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-755 disabled:opacity-40 text-slate-600 dark:text-slate-300 font-extrabold text-xs rounded-xl border border-slate-200 dark:border-slate-800 transition cursor-pointer"
             id="btn-quiz-prev"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -487,17 +584,17 @@ export default function QuizPlayer({
           {mode === "exam" && (
             <button
               onClick={handleSubmitExam}
-              className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer"
+              className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg hover:scale-101 transition-all uppercase tracking-wider cursor-pointer"
               id="btn-quiz-submit"
             >
-              Submit CBT Exam
+              Submit CBT Exam ⏱️
             </button>
           )}
 
           <button
             onClick={handleNext}
             disabled={currentIndex === questions.length - 1}
-            className="flex items-center gap-1 px-4 py-2 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 text-slate-600 font-bold text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-755 disabled:opacity-40 text-slate-600 dark:text-slate-300 font-extrabold text-xs rounded-xl border border-slate-200 dark:border-slate-800 transition cursor-pointer"
             id="btn-quiz-next"
           >
             Next
@@ -506,11 +603,19 @@ export default function QuizPlayer({
         </div>
       </div>
 
-      <div className="text-center">
-        <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-xs font-medium cursor-pointer">
-          Abort Session and Go Back
+      <div className="text-center pt-2">
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to exit your study session? Progress for this run will not be logged.")) {
+              onBack();
+            }
+          }}
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
+        >
+          Abort Session and Go Back ↩️
         </button>
       </div>
     </div>
   );
 }
+

@@ -491,6 +491,10 @@ app.get("/api/courses", (req, res) => {
   res.json({ courses: db.courses, subjects: db.subjects });
 });
 
+app.get("/api/subjects", (req, res) => {
+  res.json({ subjects: db.subjects });
+});
+
 app.post("/api/courses", authenticate, isAdmin, (req, res) => {
   const { title, description, category } = req.body;
   if (!title || !description) {
