@@ -1,5 +1,5 @@
-import React from "react";
-import { User, ExamResult } from "../types";
+import React, { useState, useEffect } from "react";
+import { User, ExamResult, Course } from "../types";
 import { 
   User as UserIcon, 
   Shield, 
@@ -14,7 +14,13 @@ import {
   ChevronRight,
   ShieldAlert,
   HelpCircle,
-  BookOpen
+  BookOpen,
+  Bell,
+  Clock,
+  Trash2,
+  Play,
+  Volume2,
+  Plus
 } from "lucide-react";
 
 interface AccountPanelProps {
@@ -25,6 +31,7 @@ interface AccountPanelProps {
   theme: "light" | "dark";
   onToggleTheme: () => void;
   results: ExamResult[];
+  courses: Course[];
 }
 
 export default function AccountPanel({
@@ -35,6 +42,7 @@ export default function AccountPanel({
   theme,
   onToggleTheme,
   results,
+  courses,
 }: AccountPanelProps) {
   const totalTests = results.length;
   const avgScore = totalTests > 0 ? Math.round(results.reduce((acc, curr) => acc + curr.score, 0) / totalTests) : 0;
@@ -42,6 +50,129 @@ export default function AccountPanel({
   // Gamified metrics
   const activeStreak = results.length === 0 ? 1 : Math.min(results.length + 1, 5);
   const coinsEarned = results.reduce((acc, curr) => acc + Math.round(curr.correctAnswers * 50), 300);
+
+  // Local Reminders State
+  interface Reminder {
+    courseId: string;
+    time: string; // e.g. "18:00"
+    lastNotifiedDate: string;
+  }
+
+  const [reminders, setReminders] = useState<Reminder[]>(() => {
+    try {
+      const stored = localStorage.getItem("cbt_reminders");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [reminderCourseId, setReminderCourseId] = useState("");
+  const [reminderTime, setReminderTime] = useState("18:00");
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+  const [tempAlert, setTempAlert] = useState<string | null>(null);
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      alert("This browser does not support local notifications.");
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+    }
+  };
+
+  const addReminder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reminderCourseId) {
+      alert("Please select a GST Course to set a reminder.");
+      return;
+    }
+
+    const exists = reminders.some(
+      (r) => r.courseId === reminderCourseId && r.time === reminderTime
+    );
+
+    if (exists) {
+      alert("A reminder at this exact time for this course is already scheduled!");
+      return;
+    }
+
+    const newReminder: Reminder = {
+      courseId: reminderCourseId,
+      time: reminderTime,
+      lastNotifiedDate: "",
+    };
+
+    const nextReminders = [...reminders, newReminder];
+    setReminders(nextReminders);
+    localStorage.setItem("cbt_reminders", JSON.stringify(nextReminders));
+    setReminderCourseId("");
+    
+    // Auto request permission if default
+    if (notificationPermission === "default") {
+      requestNotificationPermission();
+    }
+  };
+
+  const deleteReminder = (courseId: string, time: string) => {
+    const nextReminders = reminders.filter(
+      (r) => !(r.courseId === courseId && r.time === time)
+    );
+    setReminders(nextReminders);
+    localStorage.setItem("cbt_reminders", JSON.stringify(nextReminders));
+  };
+
+  const testReminder = (courseId: string) => {
+    const courseObj = courses.find((c) => c.id === courseId);
+    const courseTitle = courseObj ? courseObj.title : "Your GST Course";
+
+    // Request permission if not granted
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission().then((perm) => {
+        setNotificationPermission(perm);
+        if (perm === "granted") {
+          try {
+            new Notification("📚 Study Reminder (Test)", {
+              body: `Ready for your daily PrepMind CBT session? Today's focus is: ${courseTitle}.`,
+              requireInteraction: true
+            });
+          } catch (e) {
+            showInAppAlert(courseTitle);
+          }
+        } else {
+          showInAppAlert(courseTitle);
+        }
+      });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("📚 Study Reminder (Test)", {
+          body: `Ready for your daily PrepMind CBT session? Today's focus is: ${courseTitle}.`,
+          requireInteraction: true
+        });
+      } catch (e) {
+        showInAppAlert(courseTitle);
+      }
+    } else {
+      showInAppAlert(courseTitle);
+    }
+  };
+
+  const showInAppAlert = (courseTitle: string) => {
+    setTempAlert(courseTitle);
+    setTimeout(() => {
+      setTempAlert(null);
+    }, 5000);
+  };
 
   return (
     <div className="max-w-md mx-auto space-y-6 animate-fadeIn" id="account-panel-root">
@@ -116,6 +247,131 @@ export default function AccountPanel({
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{avgScore}%</div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500">Average CBT Accuracy</p>
           </div>
+        </div>
+      </div>
+
+      {/* Daily Study Reminders Scheduler */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+              <Bell className="h-4 w-4 text-blue-600" />
+              Daily Study Reminders
+            </h4>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Set schedules to receive study notifications for your GST courses.
+            </p>
+          </div>
+          {notificationPermission !== "granted" ? (
+            <button
+              onClick={requestNotificationPermission}
+              className="text-[10px] font-black bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-900/40 px-2.5 py-1.5 rounded-lg transition uppercase tracking-wider"
+              title="Enable push notification alerts"
+            >
+              Enable
+            </button>
+          ) : (
+            <span className="text-[9px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-md uppercase tracking-widest">
+              Active 🟢
+            </span>
+          )}
+        </div>
+
+        {/* Temporary simulation alert info */}
+        {tempAlert && (
+          <div className="bg-blue-50/75 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/60 p-3 rounded-xl flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300 animate-fadeIn">
+            <Volume2 className="h-4 w-4 shrink-0 animate-bounce" />
+            <div className="flex-1">
+              <strong>Study Test:</strong> Focus course is: <strong>{tempAlert}</strong>. Notification triggered successfully!
+            </div>
+          </div>
+        )}
+
+        {/* Setup Form */}
+        <form onSubmit={addReminder} className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-100 dark:border-slate-850 rounded-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">GST Course</label>
+              <select
+                value={reminderCourseId}
+                onChange={(e) => setReminderCourseId(e.target.value)}
+                className="w-full text-xs font-semibold px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-hidden focus:border-blue-500"
+                required
+              >
+                <option value="">Select GST Course...</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Daily Time</label>
+              <div className="flex gap-2">
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="flex-1 text-xs font-black px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-hidden focus:border-blue-500"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition shrink-0 cursor-pointer"
+                  title="Schedule Daily Alert"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        {/* Scheduled Reminders List */}
+        <div className="space-y-2">
+          <h5 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Scheduled Alarms</h5>
+          {reminders.length === 0 ? (
+            <p className="text-xs text-slate-400 dark:text-slate-500 italic">No reminders scheduled yet. Add one above to build study consistency.</p>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+              {reminders.map((rem, idx) => {
+                const courseObj = courses.find((c) => c.id === rem.courseId);
+                const courseTitle = courseObj ? courseObj.title : "GST Course";
+                return (
+                  <div key={`${rem.courseId}-${rem.time}-${idx}`} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-850 transition">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{courseTitle}</div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          Daily at {rem.time}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => testReminder(rem.courseId)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition cursor-pointer"
+                        title="Test trigger notification now"
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteReminder(rem.courseId, rem.time)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition cursor-pointer"
+                        title="Delete Reminder"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

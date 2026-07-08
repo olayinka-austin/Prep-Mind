@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Course, Subject, Material, User, ExamResult } from "../types";
 import { motion } from "motion/react";
-import { PlusCircle, FileText, Settings, Users, Clipboard, Plus, Sparkles, Loader2, RefreshCw, Calendar, CheckCircle } from "lucide-react";
+import { PlusCircle, FileText, Settings, Users, Clipboard, Plus, Sparkles, Loader2, RefreshCw, Calendar, CheckCircle, UploadCloud, AlertCircle, Edit2, Trash2, X } from "lucide-react";
 
 interface AdminPanelProps {
   token: string;
@@ -19,17 +19,154 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
   const [courseTitle, setCourseTitle] = useState("");
   const [courseDesc, setCourseDesc] = useState("");
   const [courseCat, setCourseCat] = useState("100 LEVEL");
+  const [courseNumQuestions, setCourseNumQuestions] = useState("60");
+  const [courseTimeLimit, setCourseTimeLimit] = useState("60");
+  const [coursePassingScore, setCoursePassingScore] = useState("50");
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   // Subject Form
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [subjectTitle, setSubjectTitle] = useState("");
   const [subjectDesc, setSubjectDesc] = useState("");
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
 
   // Material Form
   const [matCourseId, setMatCourseId] = useState("");
   const [matSubjectId, setMatSubjectId] = useState("");
   const [matTitle, setMatTitle] = useState("");
   const [matContent, setMatContent] = useState("");
+
+  // AI Document Upload States
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileProgressPercent, setFileProgressPercent] = useState(0);
+  const [fileProgressStep, setFileProgressStep] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processUploadedFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processUploadedFile(e.target.files[0]);
+    }
+  };
+
+  const processUploadedFile = async (file: File) => {
+    const allowedMimeTypes = [
+      "application/pdf",
+      "text/plain",
+      "text/markdown",
+      "image/png",
+      "image/jpeg",
+      "image/jpg"
+    ];
+
+    const isTextFile = file.name.endsWith(".md") || file.name.endsWith(".txt");
+
+    if (!allowedMimeTypes.includes(file.type) && !isTextFile) {
+      setUploadError("Unsupported file format. Please upload PDF, TXT, MD, or JPG/PNG image files.");
+      return;
+    }
+
+    setUploadError(null);
+    setFileLoading(true);
+    setFileProgressPercent(5);
+    setFileProgressStep("Reading document bytes & local file buffer...");
+
+    const getProgressStepText = (pct: number): string => {
+      if (pct <= 20) return "Reading document bytes & local file buffer...";
+      if (pct <= 45) return "Uploading document stream to Gemini 3.5 Flash...";
+      if (pct <= 70) return "AI parsing pages & extracting text nodes...";
+      if (pct <= 90) return "Structuring textbook theories & chapters...";
+      return "Finalizing layout & validating educational context...";
+    };
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        
+        // Start simulation interval for smooth progress UI
+        let currentPct = 12;
+        setFileProgressPercent(currentPct);
+        setFileProgressStep(getProgressStepText(currentPct));
+
+        const progressInterval = setInterval(() => {
+          currentPct = Math.min(99, currentPct + Math.floor(Math.random() * 5) + 2);
+          setFileProgressPercent(currentPct);
+          setFileProgressStep(getProgressStepText(currentPct));
+        }, 350);
+
+        try {
+          const res = await fetch("/api/admin/extract-syllabus", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              fileData: base64String,
+              mimeType: file.type || (file.name.endsWith(".md") ? "text/markdown" : "text/plain"),
+              fileName: file.name
+            })
+          });
+
+          const data = await res.json();
+          clearInterval(progressInterval);
+
+          if (res.ok && data.title && data.content) {
+            setFileProgressPercent(100);
+            setFileProgressStep("Extraction Complete! Populating forms...");
+            await new Promise((resolve) => setTimeout(resolve, 600));
+
+            setMatTitle(data.title);
+            setMatContent(data.content);
+            showMsg("Successfully extracted syllabus contents using Gemini AI!");
+          } else {
+            setUploadError(data.error || "Failed to extract syllabus content from the document.");
+            setFileProgressPercent(0);
+            setFileProgressStep("");
+          }
+        } catch (err: any) {
+          clearInterval(progressInterval);
+          setUploadError(err.message || "An error occurred during file extraction.");
+          setFileProgressPercent(0);
+          setFileProgressStep("");
+        } finally {
+          setFileLoading(false);
+        }
+      };
+      reader.onerror = () => {
+        setUploadError("Failed to read file.");
+        setFileLoading(false);
+        setFileProgressPercent(0);
+        setFileProgressStep("");
+      };
+    } catch (err: any) {
+      setUploadError(err.message);
+      setFileLoading(false);
+      setFileProgressPercent(0);
+      setFileProgressStep("");
+    }
+  };
 
   // AI Question Generator Form
   const [aiMatId, setAiMatId] = useState("");
@@ -105,13 +242,23 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: courseTitle, description: courseDesc, category: courseCat }),
+        body: JSON.stringify({ 
+          title: courseTitle, 
+          description: courseDesc, 
+          category: courseCat,
+          numQuestions: parseInt(courseNumQuestions, 10),
+          timeLimit: parseInt(courseTimeLimit, 10),
+          passingScore: parseInt(coursePassingScore, 10)
+        }),
       });
 
       if (response.ok) {
         showMsg("Course created successfully!");
         setCourseTitle("");
         setCourseDesc("");
+        setCourseNumQuestions("60");
+        setCourseTimeLimit("60");
+        setCoursePassingScore("50");
         onRefreshData();
       } else {
         showMsg("Failed to create course.", "error");
@@ -151,6 +298,161 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCourse || !courseTitle || !courseDesc) return;
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/courses/${editingCourse.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          title: courseTitle, 
+          description: courseDesc, 
+          category: courseCat,
+          numQuestions: parseInt(courseNumQuestions, 10),
+          timeLimit: parseInt(courseTimeLimit, 10),
+          passingScore: parseInt(coursePassingScore, 10)
+        }),
+      });
+
+      if (response.ok) {
+        showMsg("Course updated successfully!");
+        setCourseTitle("");
+        setCourseDesc("");
+        setCourseNumQuestions("60");
+        setCourseTimeLimit("60");
+        setCoursePassingScore("50");
+        setEditingCourse(null);
+        onRefreshData();
+      } else {
+        showMsg("Failed to update course.", "error");
+      }
+    } catch (err: any) {
+      showMsg(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this course? This will also delete all related subjects/syllabuses, textbooks, and questions! This action is irreversible.")) {
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/courses/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        showMsg("Course and all related data deleted successfully!");
+        if (editingCourse?.id === id) {
+          setEditingCourse(null);
+          setCourseTitle("");
+          setCourseDesc("");
+        }
+        onRefreshData();
+      } else {
+        showMsg("Failed to delete course.", "error");
+      }
+    } catch (err: any) {
+      showMsg(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSubject || !selectedCourseId || !subjectTitle || !subjectDesc) return;
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/subjects/${editingSubject.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ courseId: selectedCourseId, title: subjectTitle, description: subjectDesc }),
+      });
+
+      if (response.ok) {
+        showMsg("Subject syllabus updated successfully!");
+        setSubjectTitle("");
+        setSubjectDesc("");
+        setSelectedCourseId("");
+        setEditingSubject(null);
+        onRefreshData();
+      } else {
+        showMsg("Failed to update subject.", "error");
+      }
+    } catch (err: any) {
+      showMsg(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSubject = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this subject/syllabus? This will also delete all associated materials and questions! This action is irreversible.")) {
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/subjects/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        showMsg("Subject syllabus deleted successfully!");
+        if (editingSubject?.id === id) {
+          setEditingSubject(null);
+          setSubjectTitle("");
+          setSubjectDesc("");
+          setSelectedCourseId("");
+        }
+        onRefreshData();
+      } else {
+        showMsg("Failed to delete subject.", "error");
+      }
+    } catch (err: any) {
+      showMsg(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartEditCourse = (course: Course) => {
+    setEditingCourse(course);
+    setCourseTitle(course.title);
+    setCourseDesc(course.description);
+    setCourseCat(course.category || "100 LEVEL");
+    setCourseNumQuestions((course.numQuestions || 60).toString());
+    setCourseTimeLimit((course.timeLimit || 60).toString());
+    setCoursePassingScore((course.passingScore || 50).toString());
+  };
+
+  const handleStartEditSubject = (subject: Subject) => {
+    setEditingSubject(subject);
+    setSubjectTitle(subject.title);
+    setSubjectDesc(subject.description);
+    setSelectedCourseId(subject.courseId);
   };
 
   const handleUploadMaterial = async (e: React.FormEvent) => {
@@ -329,13 +631,39 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {activeTab === "courses" && (
           <>
-            {/* Create Course Form */}
-            <div className="xl:col-span-1 bg-white p-6 border border-slate-200 rounded-xl shadow-sm space-y-4">
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                <Plus className="h-4 w-4 text-blue-600" />
-                Add New Prep Course
-              </h3>
-              <form onSubmit={handleCreateCourse} className="space-y-4">
+            {/* Create/Edit Course Form */}
+            <div className={`xl:col-span-1 p-6 border rounded-xl shadow-sm space-y-4 transition-all duration-300 ${
+              editingCourse ? "bg-amber-50/50 border-amber-200" : "bg-white border-slate-200"
+            }`}>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-1.5">
+                  {editingCourse ? (
+                    <>
+                      <Edit2 className="h-4 w-4 text-amber-600" />
+                      Edit Prep Course
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 text-blue-600" />
+                      Add New Prep Course
+                    </>
+                  )}
+                </h3>
+                {editingCourse && (
+                  <button
+                    onClick={() => {
+                      setEditingCourse(null);
+                      setCourseTitle("");
+                      setCourseDesc("");
+                    }}
+                    className="text-xs font-bold text-slate-400 hover:text-rose-500 flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+              <form onSubmit={editingCourse ? handleUpdateCourse : handleCreateCourse} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">COURSE NAME</label>
                   <input
@@ -343,7 +671,7 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                     placeholder="e.g., JAMB UTME Core 2026"
                     value={courseTitle}
                     onChange={(e) => setCourseTitle(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                     required
                   />
                 </div>
@@ -352,13 +680,51 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                   <select
                     value={courseCat}
                     onChange={(e) => setCourseCat(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                   >
                     <option value="100 LEVEL">100 Level GST</option>
                     <option value="200 LEVEL">200 Level GST</option>
                     <option value="300 LEVEL">300 Level GST</option>
                     <option value="400 LEVEL">400 Level GST</option>
                   </select>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">QUESTIONS</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="200"
+                      value={courseNumQuestions}
+                      onChange={(e) => setCourseNumQuestions(e.target.value)}
+                      className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-blue-500 font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">TIME (MINS)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={courseTimeLimit}
+                      onChange={(e) => setCourseTimeLimit(e.target.value)}
+                      className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-blue-500 font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">PASS SCORE %</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={coursePassingScore}
+                      onChange={(e) => setCoursePassingScore(e.target.value)}
+                      className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-blue-500 font-bold"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">COURSE DESCRIPTION</label>
@@ -367,34 +733,73 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                     rows={3}
                     value={courseDesc}
                     onChange={(e) => setCourseDesc(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                     required
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition cursor-pointer flex justify-center items-center gap-1"
-                >
-                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                  Create Prep Course
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full font-bold py-2.5 rounded-lg text-xs transition cursor-pointer flex justify-center items-center gap-1 ${
+                      editingCourse 
+                        ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }`}
+                  >
+                    {loading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : editingCourse ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                    {editingCourse ? "Update Prep Course" : "Create Prep Course"}
+                  </button>
+                </div>
               </form>
             </div>
 
-            {/* Create Subject Form */}
-            <div className="xl:col-span-1 bg-white p-6 border border-slate-200 rounded-xl shadow-sm space-y-4">
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                <Plus className="h-4 w-4 text-blue-600" />
-                Add Subject Syllabus
-              </h3>
-              <form onSubmit={handleCreateSubject} className="space-y-4">
+            {/* Create/Edit Subject Form */}
+            <div className={`xl:col-span-1 p-6 border rounded-xl shadow-sm space-y-4 transition-all duration-300 ${
+              editingSubject ? "bg-amber-50/50 border-amber-200" : "bg-white border-slate-200"
+            }`}>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-1.5">
+                  {editingSubject ? (
+                    <>
+                      <Edit2 className="h-4 w-4 text-amber-600" />
+                      Edit Subject Syllabus
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 text-blue-600" />
+                      Add Subject Syllabus
+                    </>
+                  )}
+                </h3>
+                {editingSubject && (
+                  <button
+                    onClick={() => {
+                      setEditingSubject(null);
+                      setSubjectTitle("");
+                      setSubjectDesc("");
+                      setSelectedCourseId("");
+                    }}
+                    className="text-xs font-bold text-slate-400 hover:text-rose-500 flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+              <form onSubmit={editingSubject ? handleUpdateSubject : handleCreateSubject} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">PARENT COURSE</label>
                   <select
                     value={selectedCourseId}
                     onChange={(e) => setSelectedCourseId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                     required
                   >
                     <option value="">Select Target Course...</option>
@@ -412,7 +817,7 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                     placeholder="e.g., Chemistry"
                     value={subjectTitle}
                     onChange={(e) => setSubjectTitle(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                     required
                   />
                 </div>
@@ -423,17 +828,27 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                     rows={3}
                     value={subjectDesc}
                     onChange={(e) => setSubjectDesc(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500 font-medium"
                     required
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition cursor-pointer flex justify-center items-center gap-1"
+                  className={`w-full font-bold py-2.5 rounded-lg text-xs transition cursor-pointer flex justify-center items-center gap-1 ${
+                    editingSubject 
+                      ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }`}
                 >
-                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                  Create Subject
+                  {loading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : editingSubject ? (
+                    <CheckCircle className="h-3 w-3" />
+                  ) : (
+                    <Plus className="h-3 w-3" />
+                  )}
+                  {editingSubject ? "Update Subject Syllabus" : "Create Subject"}
                 </button>
               </form>
             </div>
@@ -441,26 +856,65 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
             {/* List current Setup */}
             <div className="xl:col-span-1 bg-white p-6 border border-slate-200 rounded-xl shadow-sm space-y-4">
               <h3 className="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">Active Syllabus Structure</h3>
-              <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[460px] overflow-y-auto pr-1">
                 {courses.length === 0 ? (
                   <p className="text-xs text-slate-400">No active prep courses created.</p>
                 ) : (
                   courses.map((course) => (
-                    <div key={course.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-bold text-slate-800 text-xs">{course.title}</h4>
-                        <span className="bg-blue-100 text-blue-800 font-bold text-[9px] px-2 py-0.5 rounded-md">{course.category}</span>
+                    <div key={course.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative group">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1.5 flex-1">
+                          <h4 className="font-extrabold text-slate-800 text-xs leading-tight">{course.title}</h4>
+                          <div className="flex flex-wrap gap-1 items-center">
+                            <span className="inline-block bg-blue-100 text-blue-800 font-bold text-[8px] px-1.5 py-0.5 rounded-md uppercase tracking-wider">{course.category}</span>
+                            <span className="inline-block bg-slate-100 text-slate-600 font-extrabold text-[8px] px-1.5 py-0.5 rounded-md uppercase">{course.numQuestions || 60} Qs</span>
+                            <span className="inline-block bg-slate-100 text-slate-600 font-extrabold text-[8px] px-1.5 py-0.5 rounded-md uppercase">{course.timeLimit || 60}m</span>
+                            <span className="inline-block bg-emerald-100 text-emerald-800 font-extrabold text-[8px] px-1.5 py-0.5 rounded-md uppercase">Pass: {course.passingScore || 50}%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 bg-white p-1 rounded-md border border-slate-100 shadow-xs">
+                          <button
+                            onClick={() => handleStartEditCourse(course)}
+                            title="Edit Course"
+                            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition cursor-pointer"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCourse(course.id)}
+                            title="Delete Course"
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="pl-2 border-l-2 border-blue-200 space-y-1">
+                      <div className="pl-2 border-l-2 border-slate-200 space-y-2">
                         {subjects
                           .filter((s) => s.courseId === course.id)
                           .map((sub) => (
-                            <div key={sub.id} className="text-[11px] text-slate-600 font-semibold">
-                              • {sub.title}
+                            <div key={sub.id} className="flex items-center justify-between gap-1.5 text-[11px] text-slate-600 font-semibold group/sub p-1 hover:bg-slate-100 rounded-md transition">
+                              <span className="truncate flex-1">• {sub.title}</span>
+                              <div className="opacity-0 group-hover/sub:opacity-100 flex items-center gap-0.5 shrink-0 bg-white/90 p-0.5 rounded border border-slate-200/60 shadow-xs transition">
+                                <button
+                                  onClick={() => handleStartEditSubject(sub)}
+                                  title="Edit Subject"
+                                  className="p-0.5 text-slate-400 hover:text-amber-600 rounded transition cursor-pointer"
+                                >
+                                  <Edit2 className="h-2.5 w-2.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSubject(sub.id)}
+                                  title="Delete Subject"
+                                  className="p-0.5 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                                >
+                                  <Trash2 className="h-2.5 w-2.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         {subjects.filter((s) => s.courseId === course.id).length === 0 && (
-                          <div className="text-[10px] text-slate-400 italic">No active subjects yet</div>
+                          <div className="text-[10px] text-slate-400 italic pl-1">No active subjects yet</div>
                         )}
                       </div>
                     </div>
@@ -513,6 +967,92 @@ export default function AdminPanel({ token, courses, subjects, onRefreshData }: 
                     ))}
                   </select>
                 </div>
+
+                {/* AI Document Upload / Extraction */}
+                <div className="bg-blue-50/50 p-4 border border-blue-100 rounded-xl space-y-3">
+                  <div className="flex items-center gap-1.5 justify-between">
+                    <span className="text-xs font-bold text-blue-700 uppercase tracking-wide flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-blue-500 fill-blue-500 animate-pulse" />
+                      AI Document Parser
+                    </span>
+                    <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                      PDF, TXT, Images
+                    </span>
+                  </div>
+                  
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center transition flex flex-col items-center justify-center cursor-pointer ${
+                      dragActive
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-slate-200 hover:border-blue-400 bg-white"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      id="syllabus-file-upload"
+                      className="hidden"
+                      accept=".pdf,.txt,.md,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      disabled={fileLoading}
+                    />
+                    
+                    <label htmlFor="syllabus-file-upload" className="cursor-pointer w-full flex flex-col items-center justify-center">
+                      {fileLoading ? (
+                        <div className="w-full py-4 px-2 space-y-4 animate-fadeIn">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-extrabold text-blue-700 flex items-center gap-1.5 animate-pulse">
+                              <Sparkles className="h-4 w-4 text-blue-500 fill-blue-500" />
+                              AI Extraction In Progress
+                            </span>
+                            <span className="font-mono font-black text-slate-700">
+                              {fileProgressPercent}%
+                            </span>
+                          </div>
+                          
+                          {/* Progress Track */}
+                          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
+                            <div 
+                              className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full transition-all duration-300 ease-out"
+                              style={{ width: `${fileProgressPercent}%` }}
+                            />
+                          </div>
+
+                          {/* Steps and detail messages */}
+                          <div className="space-y-1 text-center">
+                            <p className="text-xs font-bold text-slate-800 min-h-[16px] transition-all">
+                              {fileProgressStep}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Gemini is scanning text and diagrams. Please wait...
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 flex flex-col items-center justify-center">
+                          <UploadCloud className="h-8 w-8 text-slate-400 animate-bounce" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-slate-700">
+                              <span className="text-blue-600 underline">Click to upload</span> or drag & drop
+                            </p>
+                            <p className="text-[10px] text-slate-400">PDF, TXT, MD, or textbook photos (OCR)</p>
+                          </div>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+
+                  {uploadError && (
+                    <div className="flex items-start gap-1.5 p-2 bg-rose-50 text-rose-800 rounded-lg text-[10px] font-medium border border-rose-100">
+                      <AlertCircle className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
+                      <span>{uploadError}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">CHAPTER / TOPIC TITLE</label>
                   <input

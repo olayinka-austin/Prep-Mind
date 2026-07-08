@@ -11,6 +11,9 @@ export interface Course {
   title: string;
   description: string;
   category?: string; // e.g., UTME, WAEC, NECO, Professional
+  numQuestions?: number; // default e.g. 60
+  timeLimit?: number; // default e.g. 60 minutes
+  passingScore?: number; // default e.g. 50%
 }
 
 export interface Subject {

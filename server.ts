@@ -496,7 +496,7 @@ app.get("/api/subjects", (req, res) => {
 });
 
 app.post("/api/courses", authenticate, isAdmin, (req, res) => {
-  const { title, description, category } = req.body;
+  const { title, description, category, numQuestions, timeLimit, passingScore } = req.body;
   if (!title || !description) {
     return res.status(400).json({ error: "Title and description are required." });
   }
@@ -506,6 +506,9 @@ app.post("/api/courses", authenticate, isAdmin, (req, res) => {
     title: title.trim(),
     description: description.trim(),
     category: category ? category.trim() : "General",
+    numQuestions: numQuestions ? parseInt(numQuestions, 10) : 60,
+    timeLimit: timeLimit ? parseInt(timeLimit, 10) : 60,
+    passingScore: passingScore ? parseInt(passingScore, 10) : 50,
   };
 
   db.courses.push(newCourse);
@@ -534,6 +537,97 @@ app.post("/api/subjects", authenticate, isAdmin, (req, res) => {
   db.subjects.push(newSubject);
   saveDB();
   res.status(201).json(newSubject);
+});
+
+// Update Course
+app.put("/api/courses/:id", authenticate, isAdmin, (req, res) => {
+  const { id } = req.params;
+  const { title, description, category, numQuestions, timeLimit, passingScore } = req.body;
+  
+  const courseIndex = db.courses.findIndex((c) => c.id === id);
+  if (courseIndex === -1) {
+    return res.status(404).json({ error: "Course not found." });
+  }
+
+  if (title) db.courses[courseIndex].title = title.trim();
+  if (description) db.courses[courseIndex].description = description.trim();
+  if (category) db.courses[courseIndex].category = category.trim();
+  
+  if (numQuestions !== undefined) db.courses[courseIndex].numQuestions = parseInt(numQuestions, 10);
+  if (timeLimit !== undefined) db.courses[courseIndex].timeLimit = parseInt(timeLimit, 10);
+  if (passingScore !== undefined) db.courses[courseIndex].passingScore = parseInt(passingScore, 10);
+
+  saveDB();
+  res.json(db.courses[courseIndex]);
+});
+
+// Delete Course
+app.delete("/api/courses/:id", authenticate, isAdmin, (req, res) => {
+  const { id } = req.params;
+  const courseExists = db.courses.some((c) => c.id === id);
+  if (!courseExists) {
+    return res.status(404).json({ error: "Course not found." });
+  }
+
+  // Filter out the course
+  db.courses = db.courses.filter((c) => c.id !== id);
+
+  // Filter out related subjects
+  const relatedSubjectIds = db.subjects.filter((s) => s.courseId === id).map((s) => s.id);
+  db.subjects = db.subjects.filter((s) => s.courseId !== id);
+
+  // Filter out related materials
+  db.materials = db.materials.filter((m) => m.courseId !== id);
+
+  // Filter out related questions
+  db.questions = db.questions.filter((q) => q.courseId !== id);
+
+  saveDB();
+  res.json({ success: true, message: "Course and all related subjects, materials, and questions deleted successfully." });
+});
+
+// Update Subject/Syllabus
+app.put("/api/subjects/:id", authenticate, isAdmin, (req, res) => {
+  const { id } = req.params;
+  const { title, description, courseId } = req.body;
+
+  const subjectIndex = db.subjects.findIndex((s) => s.id === id);
+  if (subjectIndex === -1) {
+    return res.status(404).json({ error: "Subject not found." });
+  }
+
+  if (title) db.subjects[subjectIndex].title = title.trim();
+  if (description) db.subjects[subjectIndex].description = description.trim();
+  if (courseId) {
+    const courseExists = db.courses.some((c) => c.id === courseId);
+    if (!courseExists) {
+      return res.status(404).json({ error: "Course not found." });
+    }
+    db.subjects[subjectIndex].courseId = courseId;
+  }
+
+  saveDB();
+  res.json(db.subjects[subjectIndex]);
+});
+
+// Delete Subject/Syllabus
+app.delete("/api/subjects/:id", authenticate, isAdmin, (req, res) => {
+  const { id } = req.params;
+  const subjectExists = db.subjects.some((s) => s.id === id);
+  if (!subjectExists) {
+    return res.status(404).json({ error: "Subject not found." });
+  }
+
+  db.subjects = db.subjects.filter((s) => s.id !== id);
+
+  // Filter out related materials
+  db.materials = db.materials.filter((m) => m.subjectId !== id);
+
+  // Filter out related questions
+  db.questions = db.questions.filter((q) => q.subjectId !== id);
+
+  saveDB();
+  res.json({ success: true, message: "Subject and all related materials and questions deleted successfully." });
 });
 
 // -------------------------------------------------------------
@@ -567,6 +661,83 @@ app.post("/api/materials", authenticate, isAdmin, (req, res) => {
   db.materials.push(newMaterial);
   saveDB();
   res.status(201).json(newMaterial);
+});
+
+app.post("/api/admin/extract-syllabus", authenticate, isAdmin, async (req, res) => {
+  const { fileData, mimeType, fileName } = req.body;
+  if (!fileData || !mimeType) {
+    return res.status(400).json({ error: "File data (base64) and mimeType are required." });
+  }
+
+  if (!ai) {
+    return res.status(500).json({
+      error: "Gemini API is not configured on this environment. Please configure your GEMINI_API_KEY.",
+    });
+  }
+
+  try {
+    let base64Data = fileData;
+    if (base64Data.includes(";base64,")) {
+      base64Data = base64Data.split(";base64,").pop() || "";
+    }
+
+    const prompt = `You are an expert academic curriculum parser and study material compiler.
+Analyze the attached document (named "${fileName || "document"}") and extract the useful, core educational syllabus or textbook content from it.
+Synthesize the details into a high-quality, comprehensive academic chapter suitable for General Studies (GST) university courses.
+
+Focus on extracting facts, definitions, processes, key concepts, and detailed theories.
+Organize the material into cohesive, logical paragraphs or clear thematic sections with headers, so that students can easily study it.
+Make sure the extracted content is extensive and rich, so it can be used directly for constructing CBT questions and comprehensive study guides.
+
+Strip out any non-educational noise such as page numbers, header/footer text, syllabus grids, dates, class times, instructor names, or repetitive administrative bullet points.
+
+Return the response strictly as a JSON object matching this structure:
+{
+  "title": "A clean, descriptive title for this topic/chapter",
+  "content": "Detailed, comprehensive educational study material text extracted from the document."
+}`;
+
+    const documentPart = {
+      inlineData: {
+        mimeType: mimeType,
+        data: base64Data,
+      },
+    };
+
+    const textPart = {
+      text: prompt,
+    };
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: { parts: [documentPart, textPart] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            content: { type: Type.STRING },
+          },
+          required: ["title", "content"],
+        },
+      },
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("Empty response from Gemini.");
+    }
+
+    const extracted = JSON.parse(text.trim());
+    res.status(200).json(extracted);
+  } catch (err: any) {
+    console.error("Syllabus extraction error: ", err);
+    res.status(500).json({
+      error: "Failed to extract syllabus content with AI.",
+      details: err.message,
+    });
+  }
 });
 
 // -------------------------------------------------------------

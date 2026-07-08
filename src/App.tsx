@@ -101,6 +101,70 @@ export default function App() {
   });
   const [examTimeLeft, setExamTimeLeft] = useState<number | null>(null);
 
+  // Custom study reminder notification state
+  const [studyReminderNotification, setStudyReminderNotification] = useState<{
+    courseTitle: string;
+  } | null>(null);
+
+  // Background checker for active study reminders
+  useEffect(() => {
+    const checkReminders = () => {
+      try {
+        const stored = localStorage.getItem("cbt_reminders");
+        if (!stored) return;
+
+        const reminders = JSON.parse(stored);
+        if (!Array.isArray(reminders) || reminders.length === 0) return;
+
+        const now = new Date();
+        const currentHour = now.getHours().toString().padStart(2, '0');
+        const currentMin = now.getMinutes().toString().padStart(2, '0');
+        const currentTimeString = `${currentHour}:${currentMin}`;
+        const currentDateString = now.toDateString();
+
+        let updated = false;
+        const nextReminders = reminders.map((rem: any) => {
+          if (rem.time === currentTimeString && rem.lastNotifiedDate !== currentDateString) {
+            const courseObj = courses.find((c) => c.id === rem.courseId);
+            const courseTitle = courseObj ? courseObj.title : "Your GST Course";
+
+            // Trigger Browser Notification API
+            if ("Notification" in window) {
+              if (Notification.permission === "granted") {
+                try {
+                  new Notification("📚 Time to Study!", {
+                    body: `Ready for your daily PrepMind CBT session? Focus: ${courseTitle}.`,
+                    requireInteraction: true,
+                  });
+                } catch (e) {
+                  console.error("Native notification failed: ", e);
+                }
+              }
+            }
+
+            // Trigger Custom In-app Overlay
+            setStudyReminderNotification({ courseTitle });
+
+            updated = true;
+            return { ...rem, lastNotifiedDate: currentDateString };
+          }
+          return rem;
+        });
+
+        if (updated) {
+          localStorage.setItem("cbt_reminders", JSON.stringify(nextReminders));
+        }
+      } catch (err) {
+        console.error("Error in reminder interval check:", err);
+      }
+    };
+
+    checkReminders();
+    const intervalId = setInterval(checkReminders, 20000);
+
+    return () => clearInterval(intervalId);
+  }, [courses]);
+
   useEffect(() => {
     if (token) {
       fetchCurrentUser();
@@ -780,6 +844,7 @@ export default function App() {
                 theme={theme}
                 onToggleTheme={handleToggleTheme}
                 results={historyResults}
+                courses={courses}
               />
             ) : (
               <div className="text-center py-20 bg-white border border-slate-200 rounded-xl max-w-sm mx-auto space-y-4">
@@ -805,6 +870,52 @@ export default function App() {
           onSuccess={handlePaymentSuccess}
           onClose={() => setShowPaystack(false)}
         />
+      )}
+
+      {/* Custom Study Reminder Alert Modal */}
+      {studyReminderNotification && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn" id="reminder-modal">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 to-indigo-600" />
+            
+            <div className="mx-auto w-14 h-14 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center animate-bounce">
+              <BookOpen className="h-7 w-7" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+                Daily Study Alert
+              </span>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                Time to study!
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Consistency is key. Your scheduled daily reminder is active for:
+              </p>
+              <p className="text-sm font-black text-blue-600 dark:text-blue-400 py-1">
+                {studyReminderNotification.courseTitle}
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setStudyReminderNotification(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  setStudyReminderNotification(null);
+                  setCurrentView("dashboard");
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 hover:shadow-lg transition cursor-pointer"
+              >
+                Start Practice
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Footer Branding */}
